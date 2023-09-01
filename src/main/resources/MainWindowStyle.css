@@ -1,0 +1,23 @@
+.mainPane{
+    -fx-background-color: #e7f8fc;
+}
+
+.leftPanel{
+    -fx-background-color: #9db7e7;
+}
+
+.process-panel{
+    -fx-background-color: #da9f7d;
+    -fx-background-radius: 15 15 15 15;
+    -fx-cursor: hand;
+}
+
+.process-panel:hover{
+    -fx-background-color: #c47f57;
+}
+
+
+.current-process-panel{
+    -fx-background-color: #d6866d;
+    -fx-background-radius: 15 15 15 15;
+}
