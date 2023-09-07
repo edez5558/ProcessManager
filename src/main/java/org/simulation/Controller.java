@@ -7,6 +7,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -17,6 +18,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Pane;
@@ -37,8 +40,6 @@ public class Controller {
     @FXML
     private TextField txtLeftNumber;
 
-    @FXML
-    private TextField txtNameProgrammer;
 
     @FXML
     private TextField txtNumberProcess;
@@ -110,7 +111,6 @@ public class Controller {
         this.txtRightNumber.setDisable(true);
         this.txtID.setDisable(true);
         this.txtTime.setDisable(true);
-        this.txtNameProgrammer.setDisable(true);
         this.cbOperation.setDisable(true);
     }
 
@@ -119,7 +119,6 @@ public class Controller {
         this.txtRightNumber.setDisable(false);
         this.txtID.setDisable(false);
         this.txtTime.setDisable(false);
-        this.txtNameProgrammer.setDisable(false);
         this.cbOperation.setDisable(false);
     }
     private void simpleAlertIncorrectInput(String msg){
@@ -137,7 +136,6 @@ public class Controller {
         this.txtID.setText("");
         this.txtID.setDisable(false);
         this.txtTime.setText("");
-        this.txtNameProgrammer.setText("");
         this.cbOperation.setValue(null);
     }
 
@@ -145,6 +143,8 @@ public class Controller {
         Label lbID = (Label)pl.getChildren().get(1);
         Label lbEditable = (Label)pl.getChildren().get(3);
         Label lbStatus = (Label)pl.getChildren().get(4);
+        Label lbTME = (Label)pl.getChildren().get(5);
+        Label lbTR = (Label)pl.getChildren().get(6);
 
         Process current = _manager.getProcessAt(currentBatchIndex, index);
 
@@ -157,6 +157,8 @@ public class Controller {
             else
                 lbEditable.setText("Sin proceso");
 
+            lbTME.setText("00:00");
+            lbTR.setText("00:00");
             return;
         }
 
@@ -164,6 +166,8 @@ public class Controller {
 
         lbEditable.setText("");
         lbStatus.setText(current.getStatus());
+        lbTME.setText(millisecondsToTimeString(current.getTimeMilli()));
+        lbTR.setText(millisecondsToTimeString(current.getRemainingTIme()));
     }
 
     public void updateProcessInfoList(){
@@ -204,7 +208,6 @@ public class Controller {
         txtID.setDisable(true);
 
         txtTime.setText(Integer.toString(process.getTime()));
-        txtNameProgrammer.setText(process.getNameProgrammer());
         txtLeftNumber.setText(Integer.toString(process.getLeftNumber()));
         txtRightNumber.setText(Integer.toString(process.getRightNumber()));
         cbOperation.setValue(Character.toString(process.getOperation()));
@@ -285,6 +288,26 @@ public class Controller {
         });
     }
 
+    private EventHandler<KeyEvent> createKeyPressHandler(){
+        return new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent event) {
+                if(_isSelectNumber) return;
+
+                switch (event.getCode()){
+                    case I : _manager.sendInterruption();
+                        break;
+                    case E : _manager.sendError();
+                        break;
+                    case P : _manager.sendPause();
+                        break;
+                    case C : _manager.sendContinue();
+                        break;
+                }
+            }
+        };
+    }
+
     private EventHandler<Event> createProcessClickHandler(){
         /*
          * Cuando el usuario de click en uno de los procesos que se encuentren en el panel izquierdo
@@ -363,8 +386,8 @@ public class Controller {
                     btnRight.setDisable(false);
                     btnExecute.setDisable(false);
 
-                    enableProcessInfo();
-                    btnProcessSet.setDisable(false);
+                    //enableProcessInfo();
+                    //btnProcessSet.setDisable(false);
 
                     ObservableList<String> aux = cbOperation.getItems();
 
@@ -373,8 +396,11 @@ public class Controller {
                     aux.add("*");
                     aux.add("/");
                     aux.add("%");
-                    aux.add("^");
+                    //aux.add("^");
 
+                    Scene scene = btnProcessSet.getScene();
+
+                    scene.addEventHandler(KeyEvent.KEY_PRESSED,createKeyPressHandler());
                 }catch(NumberFormatException e){
                     simpleAlertIncorrectInput("Ingresa un numero");
                 }
@@ -387,11 +413,6 @@ public class Controller {
             public void handle(Event event){
                 try{
                     if(_manager == null || currentBatchIndex == -1) return;
-
-                    if(txtNameProgrammer.getText().isBlank()){
-                        simpleAlertIncorrectInput("Campo nombre de programador vacio.");
-                        return;
-                    }
 
                     if(txtID.getText().isBlank()){
                         simpleAlertIncorrectInput("Campo ID vacio.");
@@ -430,24 +451,11 @@ public class Controller {
                     }
 
                     if(currentProcess == null){
-                        Process newProcess =    new Process(
-                                                        txtNameProgrammer.getText(),
-                                                        id,
-                                                        time,
-                                                        cbOperation.getValue().charAt(0),
-                                                        leftNumber,
-                                                        rightNumber,
-                                                        "Pendiente...");
-
-                        _manager.setProcessAt(currentBatchIndex, currentProcessIndex,newProcess);
-
-                        currentProcess = newProcess; 
-
+                        System.out.println("Ups... esto no deberia estar pasando");
                         updateProcessInfoList();
                         return;
                     }
 
-                    currentProcess.setNameProgrammer(txtNameProgrammer.getText());
                     currentProcess.setLeftNumber(leftNumber);
                     currentProcess.setRightNumber(rightNumber);
                     currentProcess.setTime(time);
@@ -499,9 +507,9 @@ public class Controller {
                  * Verificar que todo los procesos esten registrados
                  */
                 for(int i = 0; i < _manager.getNumberProcess(); i++){
-                    if(_manager.getProcessAt(i/4, i%4) != null) continue;
+                    if(_manager.getProcessAt(i/3, i%3) != null) continue;
 
-                    simpleAlertIncorrectInput(String.format("Faltan datos en el lote %1d con el indice %2d",i/4 + 1,i%4));
+                    simpleAlertIncorrectInput(String.format("Faltan datos en el lote %1d con el indice %2d",i/3 + 1,i%3));
                     return;
                 }
 
@@ -509,8 +517,10 @@ public class Controller {
                 btnProcessSet.setVisible(false);
                 btnExecute.setDisable(true);
 
-                previousIndex.getStyleClass().clear();
-                previousIndex.getStyleClass().add("process-panel");
+                if(previousIndex != null){
+                    previousIndex.getStyleClass().clear();
+                    previousIndex.getStyleClass().add("process-panel");
+                }
 
                 btnLeft.setDisable(true);
                 btnRight.setDisable(true);

@@ -20,7 +20,7 @@
             <Button fx:id="btnNumberSet" layoutX="147.0" layoutY="27.0" mnemonicParsing="false" prefHeight="21.0" prefWidth="35.0" text="set" />
             <TextField fx:id="txtNumberProcess" layoutX="14.0" layoutY="27.0" prefHeight="25.0" prefWidth="129.0" />
             <Label layoutX="55.0" layoutY="6.0" text="Procesos" />
-            <FlowPane fx:id="plProcess" layoutX="12.0" layoutY="97.0" prefHeight="451.0" prefWidth="172.0" vgap="20.0">
+            <FlowPane fx:id="plProcess" alignment="CENTER" layoutX="12.0" layoutY="97.0" prefHeight="451.0" prefWidth="172.0" vgap="20.0">
                <children>
                   <Pane fx:id="plProcess1" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
                      <children>
@@ -33,6 +33,10 @@
                            </font>
                         </Label>
                         <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
                      </children>
                   </Pane>
                   <Pane fx:id="plProcess2" layoutX="10.0" layoutY="10.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
@@ -46,6 +50,10 @@
                            </font>
                         </Label>
                         <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
                      </children>
                   </Pane>
                   <Pane fx:id="plProcess3" layoutX="10.0" layoutY="100.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
@@ -59,19 +67,10 @@
                            </font>
                         </Label>
                         <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
-                     </children>
-                  </Pane>
-                  <Pane fx:id="plProcess4" layoutX="10.0" layoutY="190.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
-                     <children>
-                        <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
-                        <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
-                        <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
-                        <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
-                           <font>
-                              <Font name="System Bold" size="12.0" />
-                           </font>
-                        </Label>
-                        <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
                      </children>
                   </Pane>
                </children>
@@ -95,9 +94,7 @@
                <children>
                   <Pane layoutX="6.0" layoutY="6.0" prefHeight="109.0" prefWidth="595.0">
                      <children>
-                        <Label layoutX="14.0" layoutY="27.0" text="Nombre programador" />
                         <Label layoutX="282.0" layoutY="27.0" text="Operacion" />
-                        <TextField fx:id="txtNameProgrammer" layoutX="14.0" layoutY="44.0" prefHeight="3.0" prefWidth="196.0" />
                         <TextField fx:id="txtLeftNumber" layoutX="227.0" layoutY="44.0" prefHeight="17.0" prefWidth="55.0" />
                         <ChoiceBox fx:id="cbOperation" layoutX="286.0" layoutY="44.0" prefHeight="25.0" prefWidth="47.0" />
                         <TextField fx:id="txtRightNumber" layoutX="337.0" layoutY="44.0" prefHeight="17.0" prefWidth="55.0" />
@@ -106,7 +103,7 @@
                         <Button fx:id="btnProcessSet" layoutX="257.0" layoutY="76.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="82.0" text="Establecer" />
                         <Label layoutX="401.0" layoutY="27.0" text="Tiempo estimado" />
                         <Label layoutX="535.0" layoutY="27.0" text="ID" />
-                        <Label layoutX="14.0" layoutY="4.0" text="Datos del proceso">
+                        <Label layoutX="20.0" layoutY="45.0" text="Datos del proceso">
                            <font>
                               <Font name="System Bold" size="14.0" />
                            </font>

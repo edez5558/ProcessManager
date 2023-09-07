@@ -1,20 +1,47 @@
 package org.simulation;
 
+import java.util.Random;
+
 public class Manager extends Thread{
     private Batch[] _batchs; 
     private int _numberProcess;
-
+    private static Random random = new Random();
     private long _start;
-    private int _currentTop;
+    private long _sumTime = 0;
+    private boolean _stopGlobal = false;
 
-    private Controller _controller;
+    private final Controller _controller;
 
     private Batch _currentBatch;
 
     private long _totalRunTime;
+    public synchronized void sendInterruption(){
+        if(_currentBatch != null)
+            _currentBatch.setInterruption();
+    }
+
+    public synchronized void sendError(){
+        if(_currentBatch != null)
+            _currentBatch.setError();
+    }
+
+    public synchronized void sendPause(){
+        if(_currentBatch != null && !_stopGlobal){
+            _sumTime += System.currentTimeMillis() - _start;
+            _currentBatch.setWait();
+            _stopGlobal = true;
+        }
+    }
+
+    public synchronized void sendContinue(){
+        if(_currentBatch != null && _stopGlobal){
+            _start = System.currentTimeMillis();
+            _currentBatch.setContinue();
+            _stopGlobal = false;
+        }
+    }
 
     Manager(Controller controller){
-        _currentTop = 0;
         _currentBatch = null;
         _controller = controller;
     }
@@ -51,6 +78,7 @@ public class Manager extends Thread{
             _controller.updateProcessTime(_currentBatch.getCurrentProcessProgress());
             _controller.updateTimeRemaining(_currentBatch.getCurrentProcessRemainingTime());
             _controller.updateRunTime(_currentBatch.getCurrentProcessRunTime());
+            sendUpdateInfoList();
 
             try {
                 sleep(100);
@@ -80,16 +108,6 @@ public class Manager extends Thread{
         sendEndMessage();
     }
 
-
-    public Process getTopProcess(){
-        if(_currentTop >= _numberProcess) return null;
-
-        Process tmp = _batchs[_currentTop/4].getIndex(_currentTop%4);
-
-        _currentTop++;
-        return tmp;
-    }
-
     public int getNumberProcess(){
         return _numberProcess; 
     }
@@ -99,33 +117,58 @@ public class Manager extends Thread{
     }
 
     private long getGlobalTime(){
-        return System.currentTimeMillis() - this._start;
+        if(_stopGlobal) return _sumTime;
+
+        return _sumTime + System.currentTimeMillis() - this._start;
     }
 
     public int getTotalBatch(){
         return _batchs.length;
     }
+    private char randomOperation(){
+        switch(random.nextInt(5)){
+            case 0: return '+';
+            case 1: return '-';
+            case 2: return '*';
+            case 3: return '/';
+            case 4: return '%';
+        }
+
+        return '+';
+    }
+    private void fillBatchs(){
+        for(Batch batch : _batchs){
+            for(int i = 0; i < batch.getMaxIndex(); i++){
+                batch.setProcessAt(i, new Process(
+                                random.nextInt(18-7) + 7,
+                            randomOperation(),
+                            random.nextInt(20) + 1,
+                            random.nextInt(20) + 1,
+                            "Esperando..."
+                        )
+                        );
+            }
+        }
+    }
 
     public int setTotalProcess(int numberProcess){
-        int totalBatch = numberProcess/4;
+        int totalBatch = numberProcess/3;
+        int nProcessBatch = 3;
 
-        if(numberProcess%4 != 0)
+        if(numberProcess% nProcessBatch != 0)
             totalBatch++;
 
         _batchs =  new Batch[totalBatch];
         _numberProcess = numberProcess;
 
-        for(int i = 0; i < numberProcess/4; i++)
-            _batchs[i] = new Batch(4,i + 1,this);
+        for(int i = 0; i < numberProcess/ nProcessBatch; i++)
+            _batchs[i] = new Batch(nProcessBatch,i + 1,this);
         
-        if(numberProcess%4 != 0)
-            _batchs[numberProcess/4] = new Batch(numberProcess%4,totalBatch,this);
+        if(numberProcess% nProcessBatch != 0)
+            _batchs[numberProcess/ nProcessBatch] = new Batch(numberProcess% nProcessBatch,totalBatch,this);
 
+        fillBatchs();
         return totalBatch;
-    }
-    
-    public boolean isEmptyProcess(int index){
-        return _batchs[index/4].getIndex(index%4) != null;
     }
 
     public void setProcessAt(int indexBatch,int index,Process process){
@@ -141,8 +184,8 @@ public class Manager extends Thread{
     }
 
     public boolean avaliableID(int ID){
-        for(int i = 0; i < _batchs.length; i++){
-            if(!_batchs[i].avaliableID(ID)) return false;
+        for(Batch batch : _batchs){
+            if(batch.avaliableID(ID)) return false;
         }
 
         return true;

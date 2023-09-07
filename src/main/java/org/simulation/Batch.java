@@ -1,43 +1,109 @@
 package org.simulation;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class Batch extends Thread{
     private Process[] _process;
     private Process _currentProcess;
+    private Queue<Process> _queue;
     private int _id;
     private Manager _manager;
     private int _totalRunTime;
+    private boolean _wait = false;
 
     public int getTotalRunTime() {
         return _totalRunTime;
     }
+    public synchronized void setInterruption(){
+        _currentProcess.startWait();
+        _queue.add(_currentProcess);
+    }
+
+    public synchronized void setError(){
+        _currentProcess.setError();
+    }
+    public synchronized void setWait(){
+        _wait = true;
+        _currentProcess.startWait();
+    }
+
+    public synchronized void setContinue(){
+        if(_wait && getState() == State.WAITING){
+            synchronized (this){
+                this.notify();
+            }
+        }
+    }
+
 
     @Override
     public void run(){
-        for(int i = 0; i < _process.length; i++){
+        for(Process process = _queue.remove(); process != null; ){
             synchronized(this){
-                _currentProcess = _process[i];
+                _currentProcess = process;
+                _currentProcess.setBatch(this);
+                _currentProcess.setStatus("Ejecutandose");
                 _manager.receiveProcessInfo(_currentProcess);
-                _currentProcess.setStatus("Ejecutandose...");
-                _totalRunTime += _currentProcess.getTimeMilli();
                 _manager.sendUpdateInfoList();
-                _currentProcess.start();
+
+                if(_currentProcess.getState() == State.WAITING) {
+                    _currentProcess.awake();
+                }else{
+                    _totalRunTime += _currentProcess.getTimeMilli();
+                    _currentProcess.start();
+                }
+
             }
 
             try {
-                _currentProcess.join();
+                synchronized (this){
+                    this.wait();
+                }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.out.println("Interrupcion en Batch");
             }
 
 
-            Result aux = new Result();
-            aux.setId(_currentProcess.getID());
-            aux.setResultado(_currentProcess.getResultString());
-            aux.setLote(_id);
+            if(_wait){
 
-            _currentProcess.setStatus("Terminado");
-            _manager.sendUpdateInfoList();
-            _manager.receiveResult(aux);
+                _manager.sendUpdateInfoList();
+                try {
+                    synchronized (this){
+                        this.wait();
+                    }
+                } catch (InterruptedException e) {
+                    System.out.println("Espera en Batch");
+                }
+
+                _wait = false;
+                continue;
+            }
+
+            if(!_currentProcess.isWaiting()){
+                Result aux = new Result();
+                aux.setId(_currentProcess.getID());
+                aux.setResultado(_currentProcess.getResultString());
+                aux.setLote(_id);
+
+                _currentProcess.setStatus("Terminado");
+                _manager.sendUpdateInfoList();
+                _manager.receiveResult(aux);
+            }else{
+                _currentProcess.setStatus("Esperando...");
+                _manager.sendUpdateInfoList();
+            }
+
+            if(_currentProcess.isError()){
+                _totalRunTime -= _currentProcess.getRemainingTIme();
+                _currentProcess.setStatus("ERROR");
+                _manager.sendUpdateInfoList();
+            }
+
+            if(!_queue.isEmpty())
+                process = _queue.remove();
+            else
+                process = null;
         }
     }
 
@@ -61,6 +127,7 @@ public class Batch extends Thread{
 
     Batch(int max,int id,Manager manager){
         _process = new Process[max];
+        _queue = new LinkedList<Process>();
         _manager = manager;
         _totalRunTime = 0;
         _id = id;
@@ -68,12 +135,13 @@ public class Batch extends Thread{
 
     public void setProcessAt(int index,Process process){
         _process[index] = process;
+        setQueueProcess(process);
     }
 
-
-    public boolean isEmptyAt(int index){
-        return _process[index] == null;
+    public void setQueueProcess(Process process){
+        _queue.add(process);
     }
+
 
     public Process getIndex(int index){
         if(index >= 0 && index < _process.length)
