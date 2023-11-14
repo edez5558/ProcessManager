@@ -18,74 +18,23 @@
       <Pane layoutX="-1.0" prefHeight="600.0" prefWidth="196.0" styleClass="leftPanel">
          <children>
             <Button fx:id="btnNumberSet" layoutX="147.0" layoutY="27.0" mnemonicParsing="false" prefHeight="21.0" prefWidth="35.0" text="set" />
-            <TextField fx:id="txtNumberProcess" layoutX="14.0" layoutY="27.0" prefHeight="25.0" prefWidth="129.0" />
-            <Label layoutX="55.0" layoutY="6.0" text="Procesos" />
-            <FlowPane fx:id="plProcess" alignment="CENTER" layoutX="12.0" layoutY="97.0" prefHeight="451.0" prefWidth="172.0" vgap="20.0">
-               <children>
-                  <Pane fx:id="plProcess1" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
-                     <children>
-                        <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
-                        <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
-                        <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
-                        <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
-                           <font>
-                              <Font name="System Bold" size="12.0" />
-                           </font>
-                        </Label>
-                        <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
-                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
-                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
-                     </children>
-                  </Pane>
-                  <Pane fx:id="plProcess2" layoutX="10.0" layoutY="10.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
-                     <children>
-                        <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
-                        <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
-                        <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
-                        <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
-                           <font>
-                              <Font name="System Bold" size="12.0" />
-                           </font>
-                        </Label>
-                        <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
-                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
-                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
-                     </children>
-                  </Pane>
-                  <Pane fx:id="plProcess3" layoutX="10.0" layoutY="100.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
-                     <children>
-                        <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
-                        <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
-                        <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
-                        <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
-                           <font>
-                              <Font name="System Bold" size="12.0" />
-                           </font>
-                        </Label>
-                        <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
-                        <Label layoutX="49.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="126.0" layoutY="62.0" text="00:00" />
-                        <Label layoutX="20.0" layoutY="62.0" text="TME:" />
-                        <Label layoutX="103.0" layoutY="62.0" text="TR:" />
-                     </children>
-                  </Pane>
-               </children>
-               <padding>
-                  <Insets top="20.0" />
-               </padding>
-            </FlowPane>
-            <Button fx:id="btnRight" disable="true" layoutX="147.0" layoutY="63.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="35.0" text="&gt;" />
-            <Button fx:id="btnLeft" disable="true" layoutX="14.0" layoutY="63.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="35.0" text="&lt;" />
-            <Label fx:id="lbCurrentLote" alignment="CENTER" layoutX="52.0" layoutY="67.0" prefHeight="17.0" prefWidth="92.0" text="INDEFINIDO" />
+            <TextField fx:id="txtNumberProcess" layoutX="14.0" layoutY="27.0" prefHeight="25.0" prefWidth="71.0" />
+            <Label layoutX="26.0" layoutY="6.0" text="Procesos" />
             <Button fx:id="btnExecute" disable="true" layoutX="63.0" layoutY="556.0" mnemonicParsing="false" text="Ejecutar">
                <font>
                   <Font name="System Bold" size="14.0" />
                </font>
             </Button>
+            <TableView fx:id="tvNew" layoutX="14.0" layoutY="94.0" prefHeight="455.0" prefWidth="171.0">
+              <columns>
+                <TableColumn fx:id="tvNewID" prefWidth="75.0" text="ID" />
+                <TableColumn fx:id="tvNewStatus" prefWidth="95.0" text="Estado" />
+              </columns>
+            </TableView>
+            <Label layoutX="53.0" layoutY="58.0" text="Procesos nuevos" />
+            <Label fx:id="lbProcessRemaining" layoutX="93.0" layoutY="75.0" text="0" />
+            <TextField fx:id="txtQuantum" layoutX="93.0" layoutY="27.0" prefHeight="25.0" prefWidth="47.0" />
+            <Label layoutX="92.0" layoutY="6.0" text="Quantum" />
          </children>
       </Pane>
       <Pane layoutX="195.0" prefHeight="600.0" prefWidth="607.0">
@@ -114,9 +63,8 @@
             </Pane>
             <Pane layoutY="121.0" prefHeight="480.0" prefWidth="607.0">
                <children>
-                  <TableView fx:id="tvFinished" layoutX="18.0" layoutY="84.0" prefHeight="382.0" prefWidth="572.0">
+                  <TableView fx:id="tvFinished" layoutX="196.0" layoutY="79.0" prefHeight="243.0" prefWidth="395.0">
                     <columns>
-                      <TableColumn fx:id="tcLote" editable="false" prefWidth="75.0" sortable="false" text="LOTE" />
                       <TableColumn fx:id="tcID" editable="false" prefWidth="75.0" sortable="false" text="ID" />
                         <TableColumn fx:id="tcResult" editable="false" prefWidth="75.0" sortable="false" text="RESULTADO" />
                     </columns>
@@ -136,6 +84,71 @@
                         <Font name="System Bold" size="13.0" />
                      </font>
                   </Label>
+                  <FlowPane fx:id="plProcess" alignment="CENTER" layoutX="14.0" layoutY="82.0" prefHeight="385.0" prefWidth="158.0" vgap="20.0">
+                     <children>
+                        <Pane fx:id="plProcess1" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
+                           <children>
+                              <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
+                              <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
+                              <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
+                              <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                              <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                              <Label layoutX="103.0" layoutY="62.0" text="TR:" />
+                           </children>
+                        </Pane>
+                        <Pane fx:id="plProcess2" layoutX="10.0" layoutY="10.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
+                           <children>
+                              <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
+                              <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
+                              <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
+                              <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                              <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                              <Label layoutX="103.0" layoutY="62.0" text="TR:" />
+                           </children>
+                        </Pane>
+                        <Pane fx:id="plProcess3" layoutX="10.0" layoutY="100.0" prefHeight="90.0" prefWidth="171.0" styleClass="process-panel">
+                           <children>
+                              <Label layoutX="14.0" layoutY="6.0" prefHeight="17.0" prefWidth="23.0" text="ID" />
+                              <Label layoutX="14.0" layoutY="23.0" prefHeight="17.0" prefWidth="55.0" />
+                              <Label layoutX="86.0" layoutY="6.0" prefHeight="17.0" prefWidth="47.0" text="Estado" />
+                              <Label alignment="CENTER" layoutX="13.0" layoutY="45.0" prefHeight="17.0" prefWidth="149.0" text="Sin proceso">
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label layoutX="86.0" layoutY="23.0" prefHeight="17.0" prefWidth="82.0" />
+                              <Label layoutX="49.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="126.0" layoutY="62.0" text="00:00" />
+                              <Label layoutX="20.0" layoutY="62.0" text="TME:" />
+                              <Label layoutX="103.0" layoutY="62.0" text="TR:" />
+                           </children>
+                        </Pane>
+                     </children>
+                     <padding>
+                        <Insets top="20.0" />
+                     </padding>
+                  </FlowPane>
+                  <TableView fx:id="tvWaiting" layoutX="196.0" layoutY="345.0" prefHeight="121.0" prefWidth="149.0">
+                    <columns>
+                      <TableColumn fx:id="tvWaitingID" prefWidth="75.0" text="ID" />
+                      <TableColumn fx:id="tvWaitingTime" prefWidth="75.0" text="Tiempo" />
+                    </columns>
+                  </TableView>
+                  <Label layoutX="226.0" layoutY="325.0" text="Cola bloqueados" />
                </children>
             </Pane>
          </children></Pane>

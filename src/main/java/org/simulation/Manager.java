@@ -1,50 +1,241 @@
 package org.simulation;
 
-import java.util.Random;
+import javafx.collections.ObservableList;
+
+import java.util.*;
 
 public class Manager extends Thread{
-    private Batch[] _batchs; 
-    private int _numberProcess;
-    private static Random random = new Random();
+    private final static Random random = new Random();
     private long _start;
     private long _sumTime = 0;
     private boolean _stopGlobal = false;
 
     private final Controller _controller;
 
-    private Batch _currentBatch;
+    private ObservableList<Process> _news;
+    private ObservableList<Process> _ready;
+    private ObservableList<Process> _waiting;
+    private ObservableList<Process> _all;
+    private final RR _RR;
+    private Process _current;
+    private int _memoryprocess = 0;
+    public boolean isFull(){
+        return _memoryprocess >= 3;
+    }
+    public void addMemoryProcess(Process process){
+        process.setEnterTime();
 
-    private long _totalRunTime;
+        synchronized (RR.class){
+            _memoryprocess++;
+            _ready.add(process);
+        }
+    }
+    public Process removeMemoryProcess(){
+        if(_memoryprocess <= 0) return null;
+
+        Process aux = null;
+        synchronized (RR.class){
+            aux = _ready.remove(0);
+            _memoryprocess--;
+        }
+
+        return aux;
+    }
+
+    public Process randomProcess(){
+        Process aux = new Process(
+                random.nextInt(18-7) + 7,
+                randomOperation(),
+                random.nextInt(20) + 1,
+                random.nextInt(20) + 1,
+                "Nuevo",
+                _RR);
+
+        _all.add(aux);
+        return aux;
+    }
+    public void newProcess(){
+        Process aux = randomProcess();
+
+        if(isFull())
+            _news.add(aux);
+        else{
+            addMemoryProcess(aux);
+        }
+    }
+    public void fillProcess(int n_process, ObservableList<Process> process,
+                            ObservableList<Process> ready,ObservableList<Process> waiting,
+                            ObservableList<Process> all){
+        _news = process;
+        _ready = ready;
+        _waiting = waiting;
+        _all = all;
+
+        for(int i = 0; i < n_process; i++){
+            process.add(randomProcess());
+        }
+    }
+    Manager(Controller controller){
+        _controller = controller;
+        _RR = new RR(this);
+    }
+
+    public void setQuantum(int quantum){
+        _RR.setQuantum(quantum);
+    }
+
+    public void changeToReady(){
+        Process process = _waiting.remove(0);
+
+        System.out.println(_ready.size());
+        if(process != null){
+            process.setStatus("Listo");
+            _ready.add(process);
+            System.out.println("Un proceso en espera a sido colocado en ready");
+        }
+        else
+            System.out.println("What??");
+    }
+    public void addWaiting(Process process){
+        synchronized (RR.class){
+            _waiting.add(process);
+        }
+    }
+    public void paintBatch(){
+        while(true){
+            synchronized(RR.class){
+                if(_current.getState() == State.TERMINATED ||
+                   _current.getState() == State.WAITING)
+                    break;
+            }
+
+            _controller.updateGlobalTime(getGlobalTime());
+            _controller.updateProcessTime(_RR.getCurrentProcessProgress());
+            _controller.updateTimeRemaining(_RR.getCurrentProcessRemainingTime());
+            _controller.updateRunTime(_RR.getCurrentProcessRunTime());
+            _controller.updateRemainingProcess();
+            _controller.refreshTableBlock();
+            _controller.refreshTableTime();
+            sendUpdateInfoList();
+
+            try {
+                sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public void paintWithoutProcess(){
+        while(true){
+            synchronized(RR.class){
+                if(!_ready.isEmpty() || isEnd())
+                    break;
+            }
+
+            _controller.updateGlobalTime(getGlobalTime());
+            _controller.refreshTableBlock();
+            sendUpdateInfoList();
+
+            try {
+                sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private boolean isAllEmpty(){
+        return _news.isEmpty() && _ready.isEmpty() && _waiting.isEmpty();
+    }
+    public boolean isEnd(){
+        return _memoryprocess <= 0;
+    }
+
+    @Override
+    public void run(){
+        startGlobalTime();
+
+        _current = _news.remove(0);
+        _current.setStatus("Listo");
+
+        addMemoryProcess(_current);
+
+        for(int i = 1; i < 3; i++){
+            if(!_news.isEmpty()){
+                Process aux = _news.remove(0);
+                aux.setStatus("Listo");
+
+                addMemoryProcess(aux);
+            }
+        }
+
+
+        _RR.setReadyList(_ready);
+        _RR.start();
+
+        while(!isEnd()){
+            paintBatch();
+
+            if(_ready.isEmpty())
+                paintWithoutProcess();
+
+            if(!_ready.isEmpty() && _ready.get(0) != _current)
+                _current = _ready.get(0);
+
+            synchronized (RR.class){
+                if(!isFull()){
+                    if(isAllEmpty()) {
+                        _RR.setEnd();
+                        break;
+                    }
+                    synchronized (RR.class){
+                        if(_news.isEmpty()) continue;
+
+                        Process aux = _news.remove(0);
+                        aux.setStatus("Listo");
+
+                        addMemoryProcess(aux);
+                    }
+                }
+            }
+
+        }
+
+        sendEndMessage();
+    }
+
     public synchronized void sendInterruption(){
-        if(_currentBatch != null)
-            _currentBatch.setInterruption();
+        if(_RR != null)
+            _RR.setInterruption();
     }
 
     public synchronized void sendError(){
-        if(_currentBatch != null)
-            _currentBatch.setError();
+        if(_RR != null)
+            _RR.setError();
+    }
+    public synchronized void setStopGlobal(boolean value){
+        _stopGlobal = value ;
+    }
+    public synchronized boolean getStopGlobal(){
+        return _stopGlobal;
     }
 
-    public synchronized void sendPause(){
-        if(_currentBatch != null && !_stopGlobal){
+    public void sendPause(){
+        if(_RR != null && !getStopGlobal()){
             _sumTime += System.currentTimeMillis() - _start;
-            _currentBatch.setWait();
-            _stopGlobal = true;
+            _RR.startWait();
+            setStopGlobal(true);
         }
     }
 
-    public synchronized void sendContinue(){
-        if(_currentBatch != null && _stopGlobal){
+    public void sendContinue(){
+        if(_RR != null && getStopGlobal()){
             _start = System.currentTimeMillis();
-            _currentBatch.setContinue();
-            _stopGlobal = false;
+            _RR.setContinue();
+            setStopGlobal(false);
         }
     }
 
-    Manager(Controller controller){
-        _currentBatch = null;
-        _controller = controller;
-    }
 
     public void receiveResult(Result result){
         _controller.receiveResult(result);
@@ -60,71 +251,23 @@ public class Manager extends Thread{
     }
 
     private void sendEndMessage(){
+        _controller.updateGlobalTime(_RR.getTotalRunTime());
         _controller.updateTimeRemaining(0l);
         _controller.updateProcessTime(1.0);
-        _controller.updateGlobalTime(_totalRunTime);
         _controller.updateRunTime(0l);
         _controller.notifyEnded();
-    }
-
-    public void paintBatch(){
-        while(true){
-            synchronized(Batch.class){
-                if(_currentBatch.getState() == State.TERMINATED)
-                    break;
-            }
-
-            _controller.updateGlobalTime(getGlobalTime());
-            _controller.updateProcessTime(_currentBatch.getCurrentProcessProgress());
-            _controller.updateTimeRemaining(_currentBatch.getCurrentProcessRemainingTime());
-            _controller.updateRunTime(_currentBatch.getCurrentProcessRunTime());
-            sendUpdateInfoList();
-
-            try {
-                sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    } 
-
-    @Override
-    public void run(){
-        startGlobalTime();
-
-        for(int i = 0; i < _batchs.length; i++){
-            _controller.updateBatchRemaining(_batchs.length - (i+1));
-            _controller.setIndexBatch(i);
-
-            _currentBatch = _batchs[i];
-
-            _currentBatch.start();
-
-            paintBatch();
-
-            this._totalRunTime += _currentBatch.getTotalRunTime();
-        }
-        
-        sendEndMessage();
-    }
-
-    public int getNumberProcess(){
-        return _numberProcess; 
     }
 
     private void startGlobalTime(){
         this._start = System.currentTimeMillis();
     }
 
-    private long getGlobalTime(){
-        if(_stopGlobal) return _sumTime;
+    public synchronized long getGlobalTime(){
+        if(getStopGlobal()) return _sumTime;
 
         return _sumTime + System.currentTimeMillis() - this._start;
     }
 
-    public int getTotalBatch(){
-        return _batchs.length;
-    }
     private char randomOperation(){
         switch(random.nextInt(5)){
             case 0: return '+';
@@ -135,59 +278,5 @@ public class Manager extends Thread{
         }
 
         return '+';
-    }
-    private void fillBatchs(){
-        for(Batch batch : _batchs){
-            for(int i = 0; i < batch.getMaxIndex(); i++){
-                batch.setProcessAt(i, new Process(
-                                random.nextInt(18-7) + 7,
-                            randomOperation(),
-                            random.nextInt(20) + 1,
-                            random.nextInt(20) + 1,
-                            "Esperando..."
-                        )
-                        );
-            }
-        }
-    }
-
-    public int setTotalProcess(int numberProcess){
-        int totalBatch = numberProcess/3;
-        int nProcessBatch = 3;
-
-        if(numberProcess% nProcessBatch != 0)
-            totalBatch++;
-
-        _batchs =  new Batch[totalBatch];
-        _numberProcess = numberProcess;
-
-        for(int i = 0; i < numberProcess/ nProcessBatch; i++)
-            _batchs[i] = new Batch(nProcessBatch,i + 1,this);
-        
-        if(numberProcess% nProcessBatch != 0)
-            _batchs[numberProcess/ nProcessBatch] = new Batch(numberProcess% nProcessBatch,totalBatch,this);
-
-        fillBatchs();
-        return totalBatch;
-    }
-
-    public void setProcessAt(int indexBatch,int index,Process process){
-        _batchs[indexBatch].setProcessAt(index, process);
-    }
-
-    public int getMaxIndex(int indexBatch){
-        return _batchs[indexBatch].getMaxIndex();
-    }
-
-    public Process getProcessAt(int indexBatch,int index){
-        return _batchs[indexBatch].getIndex(index);
-    }
-
-    public boolean avaliableID(int ID){
-        for(Batch batch : _batchs){
-            if(batch.avaliableID(ID)) return false;
-        }
-
-        return true;
     }
 }

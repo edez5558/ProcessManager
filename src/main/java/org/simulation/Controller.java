@@ -6,7 +6,9 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -18,11 +20,14 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Pane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+
+import java.io.IOException;
 
 public class Controller {
     @FXML
@@ -45,16 +50,13 @@ public class Controller {
     private TextField txtNumberProcess;
 
     @FXML
+    private TextField txtQuantum;
+
+    @FXML
     private TextField txtRightNumber;
 
     @FXML
     private TextField txtTime; 
-
-    @FXML
-    private Button btnLeft;
-
-    @FXML
-    private Button btnRight;
 
     @FXML
     private FlowPane plProcess;
@@ -80,8 +82,6 @@ public class Controller {
     @FXML
     private TableColumn<Result, Integer> tcID;
 
-    @FXML
-    private TableColumn<Result, Integer> tcLote;
 
     @FXML
     private TableColumn<Result, String> tcResult;
@@ -92,20 +92,35 @@ public class Controller {
     @FXML
     private ProgressBar pbProcess;
 
+    @FXML
+    private TableView<Process> tvNew;
+
+    @FXML
+    private TableColumn<Process,Integer> tvNewID;
+
+    @FXML
+    private TableView<Process> tvWaiting;
+    @FXML
+    private TableColumn<Process,Integer> tvWaitingID;
+    @FXML
+    private TableColumn<Process,Double> tvWaitingTime;
+
+    @FXML
+    private Label lbProcessRemaining;
+    @FXML
+    private TableColumn<Process,String> tvNewStatus;
+
     private Manager _manager;
-
-    private Pane previousIndex = null;
-
-    private int currentBatchIndex = 0;
-    private int currentProcessIndex = 0;
-
-    private Process currentProcess = null;
 
     private boolean _isSelectNumber;
 
     private ObservableList<Result> _results;
-
-
+    private ObservableList<Process> _all;
+    private ObservableList<Process> _news;
+    private ObservableList<Process> _ready;
+    private ObservableList<Process> _waiting;
+    ControllerTime controllerTime = null;
+    Stage tableStage = null;
     private void disableProcessInfo(){
         this.txtLeftNumber.setDisable(true);
         this.txtRightNumber.setDisable(true);
@@ -139,61 +154,57 @@ public class Controller {
         this.cbOperation.setValue(null);
     }
 
-    private void updateProcessInfo(Pane pl,int index){
+    private void updateProcessInfo(Pane pl,Process process){
         Label lbID = (Label)pl.getChildren().get(1);
         Label lbEditable = (Label)pl.getChildren().get(3);
         Label lbStatus = (Label)pl.getChildren().get(4);
         Label lbTME = (Label)pl.getChildren().get(5);
         Label lbTR = (Label)pl.getChildren().get(6);
 
-        Process current = _manager.getProcessAt(currentBatchIndex, index);
+        //Process current = _manager.getProcessAt(index);
 
-        if(current == null){
+        if(process == null){
             lbID.setText("");
             lbStatus.setText("");
 
-            if(index < _manager.getMaxIndex(currentBatchIndex))
-                lbEditable.setText("Sin datos");
-            else
-                lbEditable.setText("Sin proceso");
+            lbEditable.setText("Sin proceso");
 
             lbTME.setText("00:00");
             lbTR.setText("00:00");
             return;
         }
 
-        lbID.setText(Integer.toString(current.getID()));
+        lbID.setText(Integer.toString(process.getID()));
 
         lbEditable.setText("");
-        lbStatus.setText(current.getStatus());
-        lbTME.setText(millisecondsToTimeString(current.getTimeMilli()));
-        lbTR.setText(millisecondsToTimeString(current.getRemainingTIme()));
+        lbStatus.setText(process.getStatus());
+        lbTME.setText(millisecondsToTimeString(process.getTimeMilli()));
+        lbTR.setText(millisecondsToTimeString(process.getRemainingTIme()));
     }
 
     public void updateProcessInfoList(){
         int index = 0;
+        ObservableList<Node> nodes = plProcess.getChildren();
 
-        for (Node node : plProcess.getChildren()) {
-            Pane aux = (Pane)node;
-            updateProcessInfo(aux, index);
+        synchronized (RR.class){
+            try{
+                for(Process process : _ready){
+                    updateProcessInfo((Pane)nodes.get(index),process);
+                    index++;
+                }
 
-            index++;
+                for(Process process : _waiting){
+                    updateProcessInfo((Pane)nodes.get(index),process);
+                    index++;
+                }
+            }catch (java.lang.IndexOutOfBoundsException ex){
+
+            }
         }
-    }
 
-
-    private void updateIndexBatch(int offset){
-        currentBatchIndex += offset;
-
-        if(currentBatchIndex < 0) currentBatchIndex = 0;
-        else
-        if(currentBatchIndex >= _manager.getTotalBatch()) currentBatchIndex = _manager.getTotalBatch() - 1;
-
-        lbCurrentLote.setText(
-            String.format("%d/%d", currentBatchIndex + 1,_manager.getTotalBatch())
-        );
-
-        updateProcessInfoList();
+        for(;index < 3; index++){
+            updateProcessInfo((Pane)nodes.get(index),null);
+        }
     }
 
     private void fillProcessData(Process process){
@@ -228,6 +239,12 @@ public class Controller {
         });
     }
 
+    public void updateRemainingProcess(){
+        Platform.runLater(() -> {
+            lbProcessRemaining.setText(Integer.toString(_news.size()));
+        });
+    }
+
     public void updateTimeRemaining(Long milliseconds){
         Platform.runLater(() -> {
             lbTimeRest.setText(millisecondsToTimeString(milliseconds));
@@ -240,31 +257,61 @@ public class Controller {
         });
     }
 
-    public void setIndexBatch(int index){
-        Platform.runLater(() -> {
-            updateIndexBatch(index - currentBatchIndex);
-        });
-    }
-
     public void updateProcessInfoListThread(){
         Platform.runLater(() -> {
             updateProcessInfoList();
         });
     }
 
-    public void notifyEnded(){
-        Platform.runLater(( ) -> {
-            this._isSelectNumber = true;
-            this.btnLeft.setDisable(false);
-            this.btnRight.setDisable(false);
-
-            Alert alert = new Alert(AlertType.INFORMATION);
-            alert.setTitle("Information Dialog");
-            alert.setHeaderText("Listo!!!");
-            alert.setContentText("Todos los procesos en los lotes sean ejecutado");
-            alert.showAndWait();
+    public void refreshTableBlock(){
+        Platform.runLater(() -> {
+            tvWaiting.refresh();
         });
-    } 
+    }
+    private boolean _isTableTimeShowing;
+    public void refreshTableTime(){
+        if(controllerTime != null && _isTableTimeShowing){
+            controllerTime.refrestTable();
+        }
+    }
+
+
+    private void createTableWindow(){
+        try {
+            FXMLLoader loader = new FXMLLoader(Main.class.getClassLoader().getResource("TableTimeProcessInterface.fxml"));
+            Parent root = loader.load();
+
+            controllerTime = loader.getController();
+            controllerTime.setResults(_all);
+
+            tableStage = new Stage();
+            tableStage.setTitle("Resultados");
+            tableStage.setResizable(false);
+            tableStage.setScene(new Scene(root, 800,400));
+            tableStage.initModality(Modality.APPLICATION_MODAL);
+            tableStage.setOnHidden(event -> {
+                _isTableTimeShowing = false;
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+    public void showtable(){
+        Platform.runLater(() -> {
+            if(tableStage == null) createTableWindow();
+
+            tableStage.show();
+            controllerTime.refrestTable();
+
+            _isTableTimeShowing = true;
+        });
+    }
+
+    public void notifyEnded(){
+        showtable();
+    }
 
     public void updateBatchRemaining(int value){
         Platform.runLater(() -> {
@@ -295,63 +342,28 @@ public class Controller {
                 if(_isSelectNumber) return;
 
                 switch (event.getCode()){
-                    case I : _manager.sendInterruption();
+                    case E : _manager.sendInterruption();
                         break;
-                    case E : _manager.sendError();
+                    case W : _manager.sendError(); //Interrupcion
                         break;
                     case P : _manager.sendPause();
                         break;
                     case C : _manager.sendContinue();
+                        break;
+                    case N : _manager.newProcess();
+                        break;
+                    case B : showtable();
                         break;
                 }
             }
         };
     }
 
-    private EventHandler<Event> createProcessClickHandler(){
-        /*
-         * Cuando el usuario de click en uno de los procesos que se encuentren en el panel izquierdo
-         */
-        return new EventHandler<Event>() {
-            @Override
-            public void handle(Event event){
-                if(_manager == null || !_isSelectNumber) return;
-
-                Pane clickPanel = (Pane)event.getSource();
-
-                currentProcessIndex = Integer.parseInt(
-                    clickPanel.getId().replace("plProcess","")
-                ) - 1;
-
-
-                if(currentProcessIndex >= _manager.getMaxIndex(currentBatchIndex)){
-                    previousIndex.getStyleClass().clear();
-                    previousIndex.getStyleClass().add("process-panel");
-                    cleanProcessInfo();
-                    return;
-                }
-
-
-                if(previousIndex != null && previousIndex != clickPanel){
-                    previousIndex.getStyleClass().clear();
-                    previousIndex.getStyleClass().add("process-panel");
-                }
-
-                clickPanel.getStyleClass().clear();
-                clickPanel.getStyleClass().add("current-process-panel");
-
-                previousIndex = clickPanel;
-
-                currentProcess = _manager.getProcessAt(currentBatchIndex, currentProcessIndex);
-                fillProcessData(currentProcess);
-            } 
-        };
-    }
-
     @FXML
     private void initialize(){
+        txtQuantum.setText("1");
+
         tcID.setCellValueFactory(new PropertyValueFactory<>("id"));
-        tcLote.setCellValueFactory(new PropertyValueFactory<>("lote"));
         tcResult.setCellValueFactory(new PropertyValueFactory<>("resultado"));
 
         disableProcessInfo();
@@ -361,6 +373,24 @@ public class Controller {
 
         tvFinished.setItems(_results);
 
+        //Iniciar tabla de nuevos
+        tvNewID.setCellValueFactory(new PropertyValueFactory<>("ID"));
+        tvNewStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        _news = FXCollections.observableArrayList();
+
+        tvNew.setItems(_news);
+
+        //Iniciar tabla de bloqueados
+        tvWaitingID.setCellValueFactory(new PropertyValueFactory<>("ID"));
+        tvWaitingTime.setCellValueFactory(new PropertyValueFactory<>("waitingTime"));
+
+        _ready = FXCollections.observableArrayList();
+        _waiting = FXCollections.observableArrayList();
+        _all = FXCollections.observableArrayList();
+
+        tvWaiting.setItems(_waiting);
+
         _manager = new Manager(this);
         _isSelectNumber = false;
 
@@ -369,26 +399,27 @@ public class Controller {
             public void handle(Event event){
                 try{
                     int number = Integer.parseInt(txtNumberProcess.getText());
+                    int quantum = Integer.parseInt(txtQuantum.getText());
 
-                    if(number <= 0){
+                    if(number <= 0 || quantum <= 0){
                         simpleAlertIncorrectInput("Ingresa un numero mayor a 0");
                         return;
                     }
 
                     btnNumberSet.setDisable(true);
                     txtNumberProcess.setDisable(true);
+                    txtQuantum.setDisable(true);
 
-                    _manager.setTotalProcess(number);
+                    _manager.fillProcess(number,_news,_ready,_waiting,_all);
+                    _manager.setQuantum(quantum);
                     _isSelectNumber = true;
-                    updateIndexBatch(0);
 
-                    btnLeft.setDisable(false);
-                    btnRight.setDisable(false);
                     btnExecute.setDisable(false);
 
                     //enableProcessInfo();
                     //btnProcessSet.setDisable(false);
 
+                    updateRemainingProcess();
                     ObservableList<String> aux = cbOperation.getItems();
 
                     aux.add("+");
@@ -407,129 +438,19 @@ public class Controller {
             }
         });
 
-
-        btnProcessSet.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<Event>() {
-            @Override
-            public void handle(Event event){
-                try{
-                    if(_manager == null || currentBatchIndex == -1) return;
-
-                    if(txtID.getText().isBlank()){
-                        simpleAlertIncorrectInput("Campo ID vacio.");
-                        return;
-                    }
-
-                    if(txtLeftNumber.getText().isBlank()){
-                        simpleAlertIncorrectInput("Campo primer numero vacio.");
-                        return;
-                    }
-
-                    if(txtRightNumber.getText().isBlank()){
-                        simpleAlertIncorrectInput("Campo segundo numero vacio.");
-                        return;
-                    }
-
-                    if(cbOperation.getValue() == null){
-                        simpleAlertIncorrectInput("Campo operacion no seleccionado.");
-                        return;
-                    }
-                    
-                    int id = Integer.parseInt(txtID.getText());
-                    int time = Integer.parseInt(txtTime.getText());
-                    int leftNumber = Integer.parseInt(txtLeftNumber.getText());
-                    int rightNumber = Integer.parseInt(txtRightNumber.getText());
-                    char operation = cbOperation.getValue().charAt(0);
-                    if(currentProcess == null && !_manager.avaliableID(id)){
-                        simpleAlertIncorrectInput("ID ya ingresado.");
-                        return;
-                    }
-
-
-                    if(rightNumber == 0 && (operation == '/' || operation == '%')){
-                        simpleAlertIncorrectInput("No se puede dividir entre 0.");
-                        return; 
-                    }
-
-                    if(currentProcess == null){
-                        System.out.println("Ups... esto no deberia estar pasando");
-                        updateProcessInfoList();
-                        return;
-                    }
-
-                    currentProcess.setLeftNumber(leftNumber);
-                    currentProcess.setRightNumber(rightNumber);
-                    currentProcess.setTime(time);
-                    currentProcess.setOperation(cbOperation.getValue().charAt(0));
-                }catch(NumberFormatException e){
-                    simpleAlertIncorrectInput("Ingresa un numero");
-                }
-            }
-        });
-
-        EventHandler<Event> event = createProcessClickHandler();
-
-        for (Node node : plProcess.getChildren()) {
-            ((Pane)node).addEventHandler(MouseEvent.MOUSE_CLICKED, event);
-        }
-
-        btnLeft.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<Event>() {
-            @Override
-            public void handle(Event event){
-                updateIndexBatch(-1);
-                currentProcess = null;
-
-                if(previousIndex == null) return;
-
-                previousIndex.getStyleClass().clear();
-                previousIndex.getStyleClass().add("process-panel");
-                cleanProcessInfo();
-            } 
-        });
-
-        btnRight.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<Event>() {
-            @Override
-            public void handle(Event event){
-                updateIndexBatch(1);
-                currentProcess = null;
-
-                if(previousIndex == null) return;
-
-                previousIndex.getStyleClass().clear();
-                previousIndex.getStyleClass().add("process-panel");
-                cleanProcessInfo();
-            } 
-        });
-
         btnExecute.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<Event>() {
             @Override
             public void handle(Event event){
-                /*
-                 * Verificar que todo los procesos esten registrados
-                 */
-                for(int i = 0; i < _manager.getNumberProcess(); i++){
-                    if(_manager.getProcessAt(i/3, i%3) != null) continue;
-
-                    simpleAlertIncorrectInput(String.format("Faltan datos en el lote %1d con el indice %2d",i/3 + 1,i%3));
-                    return;
-                }
-
-                btnProcessSet.setDisable(true); 
+                btnProcessSet.setDisable(true);
                 btnProcessSet.setVisible(false);
                 btnExecute.setDisable(true);
 
-                if(previousIndex != null){
-                    previousIndex.getStyleClass().clear();
-                    previousIndex.getStyleClass().add("process-panel");
-                }
-
-                btnLeft.setDisable(true);
-                btnRight.setDisable(true);
 
                 disableProcessInfo();
                 _isSelectNumber = false;
 
                 _manager.start();
-            } 
+            }
         });
     }
 }
